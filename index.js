@@ -5,8 +5,8 @@ const sql = require('mssql');
 const config80 = {
     user: 'sa',
     password: 'sina.com.1',
-    server: '192.168.100.80',
-    database: 'MyWebFlow',
+    server: '192.168.100.13',
+    database: 'HZYS-Client',
     options: {
         useUTC: false
     }
@@ -52,6 +52,30 @@ app.all('*', function(req, res, next) {
     else next();
 });
 
+let sql_login = "select * from Tr_member_User where [用户代码] = @userid";
+
+app.post('/api/v1/login', function(req, res){
+	const username = req.body.username || '';
+	const password = req.body.password || '';
+	let f = async function() {
+		try {
+			let result = await pool80.request().input('userid', username).query(sql_login);
+			if (result.recordset.length === 0) {
+				res.status(401).json({status:{code:101,message:'user not found'}});
+			} else if (result.recordset[0]['用户密码'] !== password) {
+				res.status(401).json({status:{code:102,message:'wrong password'}});
+			} else {
+				res.status(200).json({status:{code:0,message:'ok'},data:{username:result.recordset[0]['用户姓名']}});
+			}
+		} catch(err) {
+			console.log(err);
+			res.status(500).json(err);
+		}
+	};
+	f();
+});
+
+
 let sql_guestinfo = "select Name, Sex, Mobile, Address from T_Guest_Info where PaperValue=@id";
 
 app.get('/api/v1/guest/:id/info', function(req, res){
@@ -78,6 +102,6 @@ app.use(function(req, res){
     res.status(404).json({status:"Not found"});
 });
 
-const server = app.listen(8166, "0.0.0.0", function() {
+const server = app.listen(8084, "0.0.0.0", function() {
     console.log('listening on port %d', server.address().port);
 });
