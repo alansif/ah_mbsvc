@@ -79,7 +79,6 @@ app.post('/api/v1/login', function(req, res){
 	f();
 });
 
-
 let sql_guestinfo = "select Name, Sex, Mobile, Address from T_Guest_Info where PaperValue=@id";
 
 app.get('/api/v1/guest/:id/info', function(req, res){
@@ -98,6 +97,222 @@ app.get('/api/v1/guest/:id/info', function(req, res){
         }
     };
     f();
+});
+
+app.get('/api/v1/card', function(req, res) {
+	const id = req.query['id'] || '';
+    if (id.length !== 18) {
+        res.status(400).json({status:{code:1001,message:'证件号码格式错误'}});
+        return;
+    }
+	(async () => {
+		try {
+            let result = await pool80.request().input('id', id)
+                .query("select * from Tr_member_Cardbaseinfo WHERE 身份证号码=@id");
+            if (result.recordset.length === 0) {
+                res.status(404).json({status:{code:404,message:'此证件号码尚未办卡'}});
+            } else {
+                res.status(200).json({status:{code:0,message:'ok'},data:result.recordset[0]});
+			}
+		} catch (err) {
+            console.error(err);
+            res.status(500).end();
+        }
+	})();
+});
+
+app.post('/api/v1/card/:id/transfer', function(req, res) {
+    const id0 = req.params['id'];
+    const id1 = req.body['id1'] || '';
+    if ((id0.length !== 18) || (id1.length !== 18)) {
+        res.status(400).json({status:{code:1001,message:'证件号码格式错误'}});
+        return;
+    }
+    let f_fee = parseFloat(req.body.fee);
+    if (isNaN(f_fee)) {
+        res.status(400).json({status:{code:1003,message:'转卡费填写错误'}});
+        return;
+    }
+    let f_altphone = trim(req.body.altphone || '');
+    let f_operator = trim(req.body.operator || '');
+	(async () => {
+		try {
+            let result0 = await pool80.request().input('idnum', id0)
+                .query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用' AND GETDATE()<=有效期截止");
+            if (result0.recordset.length === 0) {
+                res.status(400).json({status:{code:1005,message:'会员卡已停用或已过期'}});
+                return;
+            }
+            const r0 = result0.recordset[0];
+            let result = await pool80.request().input('idnum', id1)
+                .query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用'");
+            if (result.recordset.length !== 0) {
+                res.status(400).json({status:{code:1012,message:'不能转卡到现有会员'}});
+                return;
+            }
+            let result1 = await pool253.request().input('id', id1)
+                .query("select * from T_Guest_Info where papervalue = @id");
+            if (result1.recordset.length === 0) {
+                res.status(400).json({status:{code:1006,message:'未找到此证件号码的客户'}});
+                return;
+            }
+            const r1 = result1.recordset[0];
+            const s1 = "UPDATE Tr_member_Cardbaseinfo SET 会员状态='已经停用',操作日期=GETDATE(),操作人员=@operator " +
+					"WHERE 身份证号码=@id0 AND 会员状态<>'已经停用'";
+            const s2 = "INSERT INTO Tr_member_Cardbaseinfo(UserID,卡号,姓名,性别,身份证号码,联系电话,通讯地址,用户密码,操作日期,操作人员,会员状态," +
+					"会员期限类别,益生套餐,采购健老,首次采购价格,享受折扣,有效期起始,有效期截止,签发日期,健康顾问,发卡门店,卡片开启,备注,定制电话," +
+					"账户预存,日常消费,账户余额,已用益生套餐,已用采购健老,会员经理,赠券金额,赠券消费,赠券余额) " +
+					"VALUES(@uid,@cid,@username,@sex,@id1,@mobile,@address,@passwd,GETDATE(),@operator,'会员转卡'," +
+					"@level,@tc,@jl,@price,@discount,@period0,@period1,@issuedt,@advisor,@shop,@status,@comment,@altphone," +
+					"@z1,@z2,@z3,@z4,@z5,@z6,@z7,@z8,@z9)";
+            const s3 = "INSERT INTO Tr_member_ChangeCardinfo(UserID,卡号,原姓名,原性别,原身份证号码,转卡日期,操作人员,姓名,性别,身份证号码,用户密码,联系电话,通讯地址,转卡门店,定制电话) " +
+					"VALUES(@uid,@cid,@username0,@sex0,@id0,GETDATE(),@operator,@username,@sex,@id1,@passwd,@mobile,@address,'总部',@altphone)";
+            const s4 = "INSERT INTO Tr_member_Moneydetail(UserID,卡号,收款门店,收款日期,收款类型,项目名称,收款金额,收款人员,姓名,性别,身份证号码) " +
+					"VALUES(@uid,@cid,'总部',GETDATE(),'会员转卡','转卡费',@fee,@operator,@username,@sex,@id1)";
+            const trans = pool80.transaction();
+            trans.begin(err => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).end();
+                    return;
+                }
+                let rolledBack = false;
+                trans.on('rollback', aborted => {
+                    rolledBack = true;
+                });
+                (async function(){
+                    try {
+                        await trans.request().input('operator',f_operator).input('id0',id0).query(s1);
+                        await trans.request().input('uid',r0['UserID']).input('cid',r0['卡号']).input('username',r1['Name']).input('sex',r1['Sex'])
+                            .input('id1',id1).input('mobile',r1['Mobile']).input('address',r1['Address']).input('passwd',r0['用户密码'])
+                            .input('operator',f_operator).input('level',r0['会员期限类别']).input('tc',r0['益生套餐']).input('jl',r0['采购健老'])
+                            .input('price',r0['首次采购价格']).input('discount',r0['享受折扣']).input('period0',r0['有效期起始']).input('period1',r0['有效期截止'])
+                            .input('issuedt',r0['签发日期']).input('advisor',r0['健康顾问']).input('shop',r0['发卡门店']).input('status',r0['卡片开启'])
+                            .input('comment',r0['备注']).input('altphone',f_altphone).input('z1',r0['账户预存']).input('z2',r0['日常消费'])
+                            .input('z3',r0['账户余额']).input('z4',r0['已用益生套餐']).input('z5',r0['已用采购健老']).input('z6',r0['会员经理'])
+                            .input('z7',r0['赠券金额']).input('z8',r0['赠券消费']).input('z9',r0['赠券余额']).query(s2);
+                        await trans.request().input('uid',r0['UserID']).input('cid',r0['卡号']).input('username0',r0['姓名']).input('sex0',r0['性别'])
+							.input('id0',id0).input('operator',f_operator).input('username',r1['Name']).input('sex',r1['Sex']).input('id1',id1)
+                            .input('passwd',r0['用户密码']).input('mobile',r1['Mobile']).input('address',r1['Address']).input('altphone',f_altphone)
+							.query(s3);
+                        await trans.request().input('uid',r0['UserID']).input('cid',r0['卡号']).input('fee',f_fee).input('operator',f_operator)
+							.input('username',r1['Name']).input('sex',r1['Sex']).input('id1',id1).query(s4);
+                        trans.commit(err_cm => {
+                            if (err_cm) {
+                                console.error('commit failed');
+                                res.status(500).end();
+                                return;
+                            }
+                            res.status(200).json({status:{code:0,message:'转卡成功'},data:{}});
+                        });
+                    } catch(err) {
+                        if (!rolledBack) {
+                            rolledBack = true;
+                            trans.rollback(err_rb => {
+                                if (err_rb) {
+                                    console.error('rollback failed');
+                                }
+                            });
+                        }
+                        console.error(err);
+                        res.status(500).end();
+                    }
+                })();
+            });
+		} catch(err) {
+            console.error(err);
+            res.status(500).end();
+        }
+	})();
+});
+
+app.post('/api/v1/card/:id/renew', function(req, res) {
+	let id = req.params['id'];
+    if (id.length !== 18) {
+        res.status(400).json({status:{code:1001,message:'证件号码格式错误'}});
+        return;
+    }
+    let f_price = parseFloat(req.body.price);
+    if (isNaN(f_price)) {
+        res.status(400).json({status:{code:1003,message:'价格填写错误'}});
+        return;
+    }
+    let f_period0 = trim(req.body.period0 || '');
+    let f_period1 = trim(req.body.period1 || '');
+    let f_operator = trim(req.body.operator || '');
+	(async () => {
+        try {
+            let result = await pool253.request().input('id', id)
+				.query("select * from T_Guest_Info where (papervalue = @id) and (isvip like '%黑色%' OR isvip like '%棕色%')");
+            if (result.recordset.length !== 0) {
+                res.status(400).json({status:{code:1004,message:'此客户为黑色或棕色客户'}});
+                return;
+            }
+            result = await pool80.request().input('idnum', id)
+				.query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用' AND GETDATE()<=有效期截止");
+            if (result.recordset.length === 0) {
+                res.status(400).json({status:{code:1005,message:'会员卡已停用或已过期'}});
+                return;
+            }
+            const r = result.recordset[0];
+            if (r['首次采购价格'] < f_price) {
+                res.status(400).json({status:{code:1006,message:'续卡价格高于首次采购价格'}});
+                return;
+			}
+            const f_userid = r['UserID'];
+            const f_cardid = r['卡号'];
+            const f_name = r['姓名'];
+            const f_sex = r['性别'];
+            const s1 = "INSERT INTO Tr_member_CardAddYearinfo(UserID,卡号,会员期限类别,益生套餐,采购健老,有效期起始,有效期截止,续卡门店,续卡日期,操作人员,采购价格,姓名,性别,身份证号码)" +
+				"VALUES(@uid,@cid,'3',3,0,@period0,@period1,'总部',GETDATE(),@operator,@price,@username,@sex,@idnum)";
+            const s2 = "INSERT INTO Tr_member_Moneydetail(UserID,卡号,收款类型,项目名称,收款金额,收款门店,收款日期,收款人员,姓名,性别,身份证号码)" +
+                "VALUES(@uid,@cid,'会员续卡','益生套餐',@price,'总部',GETDATE(),@operator,@username,@sex,@idnum)";
+            const s3 = "UPDATE Tr_member_Cardbaseinfo SET 会员期限类别='3',益生套餐=益生套餐+3,使用分类='连续续卡'," +
+				"首次采购价格=@price,有效期起始=@period0,有效期截止=@period1 WHERE 身份证号码=@idnum AND 会员状态<>'已经停用'";
+            const trans = pool80.transaction();
+            trans.begin(err => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).end();
+                    return;
+                }
+                let rolledBack = false;
+                trans.on('rollback', aborted => {
+                    rolledBack = true;
+                });
+                (async function(){
+                    try {
+                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('period0',f_period0).input('period1',f_period1)
+                            .input('operator',f_operator).input('price',f_price).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s1);
+                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('price',f_price * 3.0)
+                            .input('operator',f_operator).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s2);
+                        await trans.request().input('price',f_price).input('period0',f_period0).input('period1',f_period1).input('idnum',id).query(s3);
+                        trans.commit(err_cm => {
+                            if (err_cm) {
+                                console.error('commit failed');
+                                res.status(500).end();
+                                return;
+                            }
+                            res.status(200).json({status:{code:0,message:'续卡成功'},data:{uid:f_userid,cid:f_cardid}});
+                        });
+                    } catch(err) {
+                        if (!rolledBack) {
+                            rolledBack = true;
+                            trans.rollback(err_rb => {
+                                if (err_rb) {
+                                    console.error('rollback failed');
+                                }
+                            });
+                        }
+                        res.status(500).end();
+                    }
+                })();
+            });
+        } catch(err) {
+            console.error(err);
+            res.status(500).end();
+        }
+	})();
 });
 
 app.post('/api/v1/card', function(req, res) {
