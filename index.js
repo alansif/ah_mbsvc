@@ -121,6 +121,175 @@ app.get('/api/v1/card', function(req, res) {
 	})();
 });
 
+app.post('/api/v1/card/:id/refund', function(req, res) {
+    let id = req.params['id'];
+    if (id.length !== 18) {
+        res.status(400).json({status: {code: 1001, message: '证件号码格式错误'}});
+        return;
+    }
+    let f_operator = trim(req.body.operator || '');
+    (async () => {
+            try {
+                result = await pool80.request().input('idnum', id)
+                    .query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用'");
+                if (result.recordset.length === 0) {
+                    res.status(400).json({status:{code:1005,message:'会员卡已停用'}});
+                    return;
+                }
+                const r = result.recordset[0];
+                const f_userid = r['UserID'];
+                const f_cardid = r['卡号'];
+                const f_name = r['姓名'];
+                const f_sex = r['性别'];
+                const f_amount = r['账户余额'];
+                const s1 = "UPDATE Tr_member_CardStatus SET 卡状态=0,旧卡号='TK0000',描述='退卡可以重新使用',操作日期=GETDATE(),操作人员=@operator "
+					+ "WHERE UserID=@uid AND 卡状态=1";
+                const s2 = "UPDATE Tr_member_Cardbaseinfo SET 会员状态='已经停用',操作日期=GETDATE(),操作人员=@operator "
+                    + "WHERE UserID=@uid AND 会员状态<>'已经停用'";
+                const s3 = "INSERT INTO Tr_member_ReturnCardinfo(UserID,卡号,姓名,性别,身份证号码,联系电话,通讯地址,健康顾问,退卡日期,操作人员,退卡金额,退卡门店) " +
+					"VALUES(@uid,@cid,@username,@sex,@idnum,@mobile,@address,@advisor,GETDATE(),@operator,@amount,'总部')";
+                const s4 = "INSERT INTO Tr_member_Moneydetail(UserID,卡号,收款门店,收款日期,收款类型,项目名称,收款金额,收款人员,姓名,性别,身份证号码) " +
+                    "VALUES(@uid,@cid,'总部',GETDATE(),'会员退卡','退卡余额',-@amount,@operator,@username,@sex,@idnum)";
+                const trans = pool80.transaction();
+                trans.begin(err => {
+                    if (err) {
+                        console.error(err);
+                        res.status(500).end();
+                        return;
+                    }
+                    let rolledBack = false;
+                    trans.on('rollback', aborted => {
+                        rolledBack = true;
+                    });
+                    (async function(){
+                    	await trans.request().input('uid',f_userid).input('operator',f_operator).query(s1);
+                        await trans.request().input('uid',f_userid).input('operator',f_operator).query(s2);
+                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('username',f_name).input('sex',f_sex).input('idnum',id)
+							.input('mobile',r['联系电话']).input('address',r['通讯地址']).input('advisor',r['健康顾问'])
+                            .input('operator',f_operator).input('amount',f_amount).query(s3);
+                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('username',f_name).input('sex',f_sex).input('idnum',id)
+                            .input('operator',f_operator).input('amount',f_amount).query(s4);
+                        try {
+                            trans.commit(err_cm => {
+                                if (err_cm) {
+                                    console.error('commit failed');
+                                    res.status(500).end();
+                                    return;
+                                }
+                                res.status(200).json({status:{code:0,message:'退卡成功'},data:{}});
+                            });
+                        } catch(err) {
+                            if (!rolledBack) {
+                                rolledBack = true;
+                                trans.rollback(err_rb => {
+                                    if (err_rb) {
+                                        console.error('rollback failed');
+                                    }
+                                });
+                            }
+                            console.error(err);
+                            res.status(500).end();
+                        }
+                    })();
+                });
+            } catch(err) {
+                console.error(err);
+                res.status(500).end();
+            }
+        }
+    )();
+});
+
+app.post('/api/v1/card/:id/deposit', function(req, res) {
+    let id = req.params['id'];
+    if (id.length !== 18) {
+        res.status(400).json({status:{code:1001,message:'证件号码格式错误'}});
+        return;
+    }
+    let f_amount = parseFloat(req.body.amount);
+    if (isNaN(f_amount)) {
+        res.status(400).json({status:{code:1003,message:'金额填写错误'}});
+        return;
+    }
+    let f_dptype = "";
+    const dpt = trim(req.body.dptype || '');
+    if (dpt === '1') {
+    	f_dptype = "账户预存";
+	} else if (dpt === '2') {
+        f_dptype = "账户赠送";
+	} else {
+        res.status(400).json({status:{code:1003,message:'预存类型错误'}});
+    	return;
+	}
+    let f_comment = trim(req.body.comment || '');
+    let f_operator = trim(req.body.operator || '');
+    (async () => {
+    	try {
+            result = await pool80.request().input('idnum', id)
+                .query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用' AND GETDATE()<=有效期截止");
+            if (result.recordset.length === 0) {
+                res.status(400).json({status:{code:1005,message:'会员卡已停用或已过期'}});
+                return;
+            }
+            const r = result.recordset[0];
+            const f_userid = r['UserID'];
+            const f_cardid = r['卡号'];
+            const f_name = r['姓名'];
+            const f_sex = r['性别'];
+            const s1 = "INSERT INTO Tr_member_Moneydetail(UserID,卡号,收款门店,收款日期,收款类型,项目名称,收款金额,收款人员,姓名,性别,身份证号码,备注) " +
+					"VALUES(@uid,@cid,'总部',GETDATE(),'日常储值',@dpt,@amount,@operator,@username,@sex,@idnum,@comment)";
+            const s2 = "UPDATE Tr_member_Cardbaseinfo SET 账户预存=账户预存+@amount,账户余额=账户余额+@amount WHERE 身份证号码=@idnum AND 会员状态<>'已经停用'";
+            const s3 = "UPDATE Tr_member_Cardbaseinfo SET 赠券金额=赠券金额+@amount,赠券余额=赠券余额+@amount WHERE 身份证号码=@idnum AND 会员状态<>'已经停用'";
+            const trans = pool80.transaction();
+            trans.begin(err => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).end();
+                    return;
+                }
+                let rolledBack = false;
+                trans.on('rollback', aborted => {
+                    rolledBack = true;
+                });
+                (async function(){
+                    await trans.request().input('uid',f_userid).input('cid',f_cardid).input('dpt',f_dptype).input('amount',f_amount)
+						.input('operator',f_operator).input('username',f_name).input('sex',f_sex).input('idnum',id).input('comment',f_comment).query(s1);
+                    if (dpt === '1') {
+                        await trans.request().input('amount',f_amount).input('idnum',id).query(s2);
+					} else if (dpt === '2') {
+                        await trans.request().input('amount',f_amount).input('idnum',id).query(s3);
+					}
+                    try {
+                        trans.commit(err_cm => {
+                            if (err_cm) {
+                                console.error('commit failed');
+                                res.status(500).end();
+                                return;
+                            }
+                            res.status(200).json({status:{code:0,message:'预存成功'},data:{}});
+                        });
+                    } catch(err) {
+                        if (!rolledBack) {
+                            rolledBack = true;
+                            trans.rollback(err_rb => {
+                                if (err_rb) {
+                                    console.error('rollback failed');
+                                }
+                            });
+                        }
+                        console.error(err);
+                        res.status(500).end();
+                    }
+                })();
+            });
+		} catch(err) {
+            console.error(err);
+            res.status(500).end();
+        }
+    }
+	)();
+});
+
 app.post('/api/v1/card/:id/transfer', function(req, res) {
     const id0 = req.params['id'];
     const id1 = req.body['id1'] || '';
