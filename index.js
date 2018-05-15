@@ -424,7 +424,7 @@ app.post('/api/v1/card/:id/renew', function(req, res) {
                 return;
             }
             const r = result.recordset[0];
-            if (r['首次采购价格'] < f_price) {
+            if (r['首次采购价格'] < f_price / 3.0) {
                 res.status(400).json({status:{code:1006,message:'续卡价格高于首次采购价格'}});
                 return;
 			}
@@ -453,9 +453,9 @@ app.post('/api/v1/card/:id/renew', function(req, res) {
                     try {
                         await trans.request().input('uid',f_userid).input('cid',f_cardid).input('period0',f_period0).input('period1',f_period1)
                             .input('operator',f_operator).input('price',f_price).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s1);
-                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('price',f_price * 3.0)
+                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('price',f_price)
                             .input('operator',f_operator).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s2);
-                        await trans.request().input('price',f_price).input('period0',f_period0).input('period1',f_period1).input('idnum',id).query(s3);
+                        await trans.request().input('price',f_price / 3.0).input('period0',f_period0).input('period1',f_period1).input('idnum',id).query(s3);
                         trans.commit(err_cm => {
                             if (err_cm) {
                                 console.error('commit failed');
@@ -554,10 +554,10 @@ app.post('/api/v1/card', function(req, res) {
 					try {
                         await trans.request().input('uid',maxuid).input('cid',maxcid).input('operator',f_operator).query(s1);
                         await trans.request().input('uid',maxuid).input('cid',maxcid).input('username',f_name).input('sex',f_sex)
-							.input('idnum',id).input('mobile',f_mobile).input('address',f_address).input('price',f_price)
+							.input('idnum',id).input('mobile',f_mobile).input('address',f_address).input('price',f_price / 3.0)
 							.input('period0',f_period0).input('period1',f_period1).input('advisor',f_advisor)
 							.input('operator',f_operator).input('comment',f_comment).input('altphone',f_altphone).query(s2);
-                        await trans.request().input('uid',maxuid).input('cid',maxcid).input('price',f_price * 3.0)
+                        await trans.request().input('uid',maxuid).input('cid',maxcid).input('price',f_price)
 							.input('operator',f_operator).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s3);
                         await trans.request().input('uid',maxuid).input('cid',maxcid).input('username',f_name).input('sex',f_sex)
                             .input('idnum',id).input('mobile',f_mobile).input('address',f_address).input('advisor',f_advisor)
