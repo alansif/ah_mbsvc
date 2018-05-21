@@ -274,6 +274,103 @@ app.post('/api/v1/card/:id/refund', function(req, res) {
     )();
 });
 
+app.post('/api/v1/card/:id/consume', function(req, res) {
+    let id = req.params['id'];
+    if (id.length !== 18) {
+        res.status(400).json({status: {code: 1001, message: '证件号码格式错误'}});
+        return;
+    }
+    let f_ctm = parseFloat(req.body.ctm);
+    let f_adt = parseFloat(req.body.adt);
+    let f_oth = parseFloat(req.body.oth);
+    let f_sum = f_ctm + f_adt + f_oth;
+    if (isNaN(f_ctm) || isNaN(f_adt) || isNaN(f_oth) || (f_sum === 0)) {
+        res.status(400).json({status:{code:1003,message:'金额填写错误'}});
+        return;
+    }
+    let f_ctmcomment = trim(req.body.ctmcomment || '');
+    let f_adtcomment = trim(req.body.adtcomment || '');
+    let f_othcomment = trim(req.body.othcomment || '');
+    let f_operator = trim(req.body.operator || '');
+    (async () => {
+        try {
+            result = await pool80.request().input('idnum', id)
+                .query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用' AND GETDATE()<=有效期截止");
+            if (result.recordset.length === 0) {
+                res.status(400).json({status:{code:1005,message:'会员卡已停用或已过期'}});
+                return;
+            }
+            const r = result.recordset[0];
+            if (r['账户余额'] < f_sum) {
+                res.status(400).json({status:{code:1005,message:'账户余额不足'}});
+                return;
+			}
+            const f_userid = r['UserID'];
+            const f_cardid = r['卡号'];
+            const f_name = r['姓名'];
+            const f_sex = r['性别'];
+            const s1 = "INSERT INTO Tr_member_ConsumeRecord(UserID,卡号,体检门店,项目名称,消费金额,体检日期,操作日期,操作人员,备注,姓名,性别,身份证号码,标记) " +
+					"VALUES(@uid,@cid,'总部',@item,@amount,GETDATE(),GETDATE(),@operator,@comment,@username,@sex,@idnum,'Y')";
+            const s2 = "INSERT INTO Tr_member_ConsumeRecordByCardMoney(UserID,卡号,体检门店,刷卡金额,体检日期,操作日期,操作人员,姓名,性别,身份证号码,消费类型,标记) " +
+					"VALUES(@uid,@cid,'总部',@sum,GETDATE(),GETDATE(),@operator,@username,@sex,@idnum,'现金','Y')";
+            const s3 = "UPDATE Tr_member_Cardbaseinfo SET 日常消费=日常消费+@sum,账户余额=账户余额-@sum WHERE 身份证号码=@idnum AND 会员状态<>'已经停用'";
+            const trans = pool80.transaction();
+            trans.begin(err => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).end();
+                    return;
+                }
+                let rolledBack = false;
+                trans.on('rollback', aborted => {
+                    rolledBack = true;
+                });
+                (async function(){
+                	if (f_ctm > 0) {
+                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('item','定制费').input('amount',f_ctm)
+                            .input('operator',f_operator).input('comment',f_ctmcomment).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s1);
+					}
+                    if (f_adt > 0) {
+                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('item','加项费').input('amount',f_adt)
+                            .input('operator',f_operator).input('comment',f_adtcomment).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s1);
+                    }
+                    if (f_oth > 0) {
+                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('item','其他').input('amount',f_oth)
+                            .input('operator',f_operator).input('comment',f_othcomment).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s1);
+                    }
+                    await trans.request().input('uid',f_userid).input('cid',f_cardid).input('sum',f_sum).input('operator',f_operator)
+                        .input('username',f_name).input('sex',f_sex).input('idnum',id).query(s2);
+                    await trans.request().input('sum',f_sum).input('idnum',id).query(s3);
+                    try {
+                        trans.commit(err_cm => {
+                            if (err_cm) {
+                                console.error('commit failed');
+                                res.status(500).end();
+                                return;
+                            }
+                            res.status(200).json({status:{code:0,message:'操作成功'},data:{}});
+                        });
+                    } catch(err) {
+                        if (!rolledBack) {
+                            rolledBack = true;
+                            trans.rollback(err_rb => {
+                                if (err_rb) {
+                                    console.error('rollback failed');
+                                }
+                            });
+                        }
+                        console.error(err);
+                        res.status(500).end();
+                    }
+                })();
+            });
+        } catch(err) {
+            console.error(err);
+            res.status(500).end();
+        }
+	})();
+});
+
 app.post('/api/v1/card/:id/deposit', function(req, res) {
     let id = req.params['id'];
     if (id.length !== 18) {
