@@ -579,6 +579,7 @@ app.post('/api/v1/card/:id/renew', function(req, res) {
     }
     let f_period0 = trim(req.body.period0 || '');
     let f_period1 = trim(req.body.period1 || '');
+    let f_mode = req.body.mode || '连续续卡';
     let f_operator = trim(req.body.operator || '');
 	(async () => {
         try {
@@ -589,9 +590,9 @@ app.post('/api/v1/card/:id/renew', function(req, res) {
                 return;
             }
             result = await pool80.request().input('idnum', id)
-				.query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用' AND GETDATE()<=有效期截止");
+				.query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用'");
             if (result.recordset.length === 0) {
-                res.status(400).json({status:{code:1005,message:'会员卡已停用或已过期'}});
+                res.status(400).json({status:{code:1005,message:'不是会员或会员卡已停用'}});
                 return;
             }
             const r = result.recordset[0];
@@ -609,7 +610,7 @@ app.post('/api/v1/card/:id/renew', function(req, res) {
 				"VALUES(@uid,@cid,'3',3,0,@period0,@period1,'总部',GETDATE(),@operator,@price,@username,@sex,@idnum,'Y')";
             const s2 = "INSERT INTO Tr_member_Moneydetail(UserID,卡号,收款类型,项目名称,收款金额,收款门店,收款日期,收款人员,姓名,性别,身份证号码,标记)" +
                 "VALUES(@uid,@cid,'会员续卡','益生套餐',@price,'总部',GETDATE(),@operator,@username,@sex,@idnum,'Y')";
-            const s3 = "UPDATE Tr_member_Cardbaseinfo SET 会员期限类别='3',益生套餐=益生套餐+3,使用分类='连续续卡'," +
+            const s3 = "UPDATE Tr_member_Cardbaseinfo SET 会员期限类别='3',益生套餐=益生套餐+3,使用分类=@mode," +
 				"首次采购价格=@price,有效期起始=@period0,有效期截止=@period1,标记='Y' WHERE 身份证号码=@idnum AND 会员状态<>'已经停用'";
             const trans = pool80.transaction();
             trans.begin(err => {
@@ -628,7 +629,8 @@ app.post('/api/v1/card/:id/renew', function(req, res) {
                             .input('operator',f_operator).input('price',f_price).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s1);
                         await trans.request().input('uid',f_userid).input('cid',f_cardid).input('price',f_price)
                             .input('operator',f_operator).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s2);
-                        await trans.request().input('price',f_price / 3.0).input('period0',f_period0).input('period1',f_period1).input('idnum',id).query(s3);
+                        await trans.request().input('mode',f_mode).input('price',f_price / 3.0).input('period0',f_period0).input('period1',f_period1)
+							.input('idnum',id).query(s3);
                         trans.commit(err_cm => {
                             if (err_cm) {
                                 console.error('commit failed');
