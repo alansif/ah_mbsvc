@@ -1,16 +1,8 @@
 //const moment = require('moment')
 
-const sql = require('mssql');
+const config80 = require('./config').config80;
 
-const config80 = {
-    user: 'sa',
-    password: 'sina.com.1',
-    server: '192.168.100.13',
-    database: 'HZYS-Server',
-    options: {
-        useUTC: false
-    }
-};
+const sql = require('mssql');
 
 const pool80 = new sql.ConnectionPool(config80, err => {
     if (err)
