@@ -672,7 +672,7 @@ app.post('/api/v1/card', function(req, res) {
 	let f_sex = trim(req.body.sex || '');
 	let f_mobile = trim(req.body.mobile || '');
 	let f_address = trim(req.body.address || '');
-    let f_email = trim(req.body.f_email || '');
+    let f_email = trim(req.body.email || '');
 	let f_period0 = trim(req.body.period0 || '');
 	let f_period1 = trim(req.body.period1 || '');
 	let f_advisor = trim(req.body.advisor || '');
