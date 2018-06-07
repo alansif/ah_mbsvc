@@ -482,6 +482,12 @@ app.post('/api/v1/card/:id/transfer', function(req, res) {
                 res.status(400).json({status:{code:1012,message:'不能转卡到现有会员'}});
                 return;
             }
+            let resultz = await pool253.request().input('id', id1)
+                .query("select * from T_Guest_Info where (papervalue = @id) and (isvip like '%黑色%' OR isvip like '%棕色%')");
+            if (resultz.recordset.length !== 0) {
+                res.status(400).json({status:{code:1004,message:'此客户为黑色或棕色客户'}});
+                return;
+            }
             let result1 = await pool253.request().input('id', id1)
                 .query("select * from T_Guest_Info where papervalue = @id");
             if (result1.recordset.length === 0) {
@@ -681,7 +687,13 @@ app.post('/api/v1/card', function(req, res) {
 	let f_operator = trim(req.body.operator || '');
 	let f = async function() {
 		try {
-			let result = await pool80.request().input('id', id)
+            let result = await pool253.request().input('id', id)
+                .query("select * from T_Guest_Info where (papervalue = @id) and (isvip like '%黑色%' OR isvip like '%棕色%')");
+            if (result.recordset.length !== 0) {
+                res.status(400).json({status:{code:1004,message:'此客户为黑色或棕色客户'}});
+                return;
+            }
+			result = await pool80.request().input('id', id)
 				.query("select * from Tr_member_Cardbaseinfo WHERE 身份证号码=@id");
 			if (result.recordset.length !== 0) {
 				res.status(400).json({status:{code:1003,message:'此证件号码已办理过会员卡'}});

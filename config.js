@@ -1,7 +1,7 @@
 const config80 = {
     user: 'sa',
     password: 'sina.com.1',
-    server: '192.168.100.13',
+    server: '192.168.100.80',
     database: 'HZYS-Server',
     options: {
         useUTC: false
