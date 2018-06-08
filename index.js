@@ -71,7 +71,7 @@ app.post('/api/v1/login', function(req, res){
 	f();
 });
 
-let sql_guestinfo = "select Name, Sex, Mobile, Address, Email from T_Guest_Info where PaperValue=@id";
+let sql_guestinfo = "select Name, Sex, Mobile, Address, Email, Remarks from T_Guest_Info where PaperValue=@id";
 
 app.get('/api/v1/guest/:id/info', function(req, res){
     const id = req.params['id'];
