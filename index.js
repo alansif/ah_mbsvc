@@ -49,6 +49,7 @@ function trim(str) {
 }
 
 let sql_login = "select * from Tr_member_User where [用户代码] = @userid";
+let sql_privileges = "select buttonname from Tr_member_moduleinfo where Suser = @userid";
 
 app.post('/api/v1/login', function(req, res){
 	const username = req.body.username || '';
@@ -57,11 +58,12 @@ app.post('/api/v1/login', function(req, res){
 		try {
 			let result = await pool80.request().input('userid', username).query(sql_login);
 			if (result.recordset.length === 0) {
-				res.status(401).json({status:{code:101,message:'user not found'}});
+				res.status(401).json({status:{code:101,message:'没有这个用户'}});
 			} else if (result.recordset[0]['用户密码'] !== password) {
-				res.status(401).json({status:{code:102,message:'wrong password'}});
+				res.status(401).json({status:{code:102,message:'密码错误'}});
 			} else {
-				res.status(200).json({status:{code:0,message:'ok'},data:{username:result.recordset[0]['用户姓名']}});
+			    let r1 = await pool80.request().input('userid', username).query(sql_privileges);
+				res.status(200).json({status:{code:0,message:'ok'},data:{username:result.recordset[0]['用户姓名'],privileges:r1.recordset.map(v=>v['buttonname'])}});
 			}
 		} catch(err) {
 			console.error(err);
@@ -100,9 +102,9 @@ app.get('/api/v1/card', function(req, res) {
 	(async () => {
 		try {
             let result = await pool80.request().input('id', id)
-                .query("select * from Tr_member_Cardbaseinfo WHERE 身份证号码=@id");
+                .query("select * from Tr_member_Cardbaseinfo WHERE 身份证号码=@id AND 会员状态<>'已经停用'");
             if (result.recordset.length === 0) {
-                res.status(404).json({status:{code:404,message:'此证件号码尚未办卡'}});
+                res.status(400).json({status:{code:1005,message:'此证件号码尚未办卡或卡已停用'}});
             } else {
                 res.status(200).json({status:{code:0,message:'ok'},data:result.recordset[0]});
 			}
