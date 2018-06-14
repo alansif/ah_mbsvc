@@ -115,6 +115,30 @@ app.get('/api/v1/card', function(req, res) {
 	})();
 });
 
+app.get('/api/v1/dossier', function(req, res) {
+    const id = req.query['id'] || '';
+    if (id.length !== 18) {
+        res.status(400).json({status:{code:1001,message:'证件号码格式错误'}});
+        return;
+    }
+    let tbname = req.query['tbname'] || '';
+    if (id.length === 0) {
+        res.status(400).json({status:{code:1002,message:'名称错误'}});
+        return;
+    }
+    tbname = "Tr_member_" + tbname;
+    (async () => {
+        try {
+            let result = await pool80.request().input('id', id).input('tbname', tbname)
+                .query(`select * from ${tbname} WHERE 身份证号码=@id`);
+            res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
+        } catch (err) {
+            console.error(err);
+            res.status(500).end();
+        }
+    })();
+});
+
 app.post('/api/v1/card/:id/changeperiod', function(req, res) {
     let id = req.params['id'];
     if (id.length !== 18) {
