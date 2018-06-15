@@ -139,6 +139,31 @@ app.get('/api/v1/dossier', function(req, res) {
     })();
 });
 
+app.get('/api/v1/query/period', function(req, res){
+    let from0 = req.query['from0'] || '';
+    let from1 = req.query['from1'] || '';
+    let to0 = req.query['to0'] || '';
+    let to1 = req.query['to1'] || '';
+    if (from0.length === 0) from0 = '2000-01-01';
+    if (from1.length === 0) from1 = '2039-12-31';
+    from0 += ' 00:00:00';
+    from1 += ' 23:59:59';
+    if (to0.length === 0) to0 = '2000-01-01';
+    if (to1.length === 0) to1 = '2039-12-31';
+    to0 += ' 00:00:00';
+    to1 += ' 23:59:59';
+    (async () => {
+        try {
+            let result = await pool80.request().input('from0', from0).input('from1', from1).input('to0', to0).input('to1', to1)
+                .query(`select top 100 * from Tr_member_Cardbaseinfo WHERE (有效期起始 between @from0 and @from1) AND (有效期截止 between @to0 and @to1)`);
+            res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
+        } catch (err) {
+            console.error(err);
+            res.status(500).end();
+        }
+    })();
+});
+
 app.post('/api/v1/card/:id/changeperiod', function(req, res) {
     let id = req.params['id'];
     if (id.length !== 18) {

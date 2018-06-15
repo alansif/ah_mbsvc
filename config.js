@@ -4,7 +4,7 @@ const config80 = {
     server: '192.168.100.80',
     database: 'HZYS-Server',
     options: {
-        useUTC: false
+        useUTC: true
     }
 };
 
