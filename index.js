@@ -164,6 +164,84 @@ app.get('/api/v1/query/period', function(req, res){
     })();
 });
 
+app.post('/api/v1/card/:id/changeinfo', function(req, res){
+    let id = req.params['id'];
+    if (id.length !== 18) {
+        res.status(400).json({status: {code: 1001, message: '证件号码格式错误'}});
+        return;
+    }
+    let f_chglist = req.body.chglist || [];
+    if (f_chglist.length === 0) {
+        res.status(400).json({status: {code: 1019, message: '列表为空'}});
+        return;
+    }
+    let f_operator = trim(req.body.operator || '');
+    (async () => {
+        try {
+            result = await pool80.request().input('idnum', id)
+                .query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用'");
+            if (result.recordset.length === 0) {
+                res.status(400).json({status:{code:1005,message:'不是会员或会员卡已停用'}});
+                return;
+            }
+            const r = result.recordset[0];
+            const f_userid = r['UserID'];
+            const f_cardid = r['卡号'];
+            const f_name = r['姓名'];
+            const f_sex = r['性别'];
+            const s1 = "INSERT INTO Tr_member_ChangeInfo(UserID,卡号,姓名,性别,身份证号码,操作日期,操作人员,修改项目,修改前,修改后) " +
+                "VALUES(@uid,@cid,@username,@sex,@idnum,GETDATE(),@operator,@entry,@oldv,@newv)";
+            const trans = pool80.transaction();
+            trans.begin(err => {
+                if (err) {
+                    console.error(err);
+                    res.status(500).end();
+                    return;
+                }
+                let rolledBack = false;
+                trans.on('rollback', aborted => {
+                    rolledBack = true;
+                });
+                (async function(){
+                    for(let c of f_chglist) {
+                        let k = c.entry;
+                        let oldv = r[k];
+                        let newv = c.value;
+                        let s2 = `UPDATE Tr_member_Cardbaseinfo SET ${k}=@newv WHERE 身份证号码=@idnum AND 会员状态<>'已经停用'`;
+                        await trans.request().input('idnum',id).input('newv',newv).query(s2);
+                        await trans.request().input('uid',f_userid).input('cid',f_cardid).input('username',f_name).input('sex',f_sex).input('idnum',id)
+                            .input('operator',f_operator).input('entry',k).input('oldv',oldv).input('newv',newv).query(s1);
+                    }
+                    try {
+                        trans.commit(err_cm => {
+                            if (err_cm) {
+                                console.error('commit failed');
+                                res.status(500).end();
+                                return;
+                            }
+                            res.status(200).json({status:{code:0,message:'操作成功'},data:{}});
+                        });
+                    } catch(err) {
+                        if (!rolledBack) {
+                            rolledBack = true;
+                            trans.rollback(err_rb => {
+                                if (err_rb) {
+                                    console.error('rollback failed');
+                                }
+                            });
+                        }
+                        console.error(err);
+                        res.status(500).end();
+                    }
+                })();
+            });
+        }catch(err) {
+            console.error(err);
+            res.status(500).end();
+        }
+    })();
+});
+
 app.post('/api/v1/card/:id/changeperiod', function(req, res) {
     let id = req.params['id'];
     if (id.length !== 18) {
