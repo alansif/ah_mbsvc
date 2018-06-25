@@ -115,6 +115,24 @@ app.get('/api/v1/card', function(req, res) {
 	})();
 });
 
+app.get('/api/v1/query/keyword', function(req, res) {
+    const kw = req.query['keyword'] || '########';
+    (async () => {
+        try {
+            let result = await pool80.request().input('kw',kw)
+                .query("select * from Tr_member_Cardbaseinfo WHERE (卡号=@kw OR 姓名=@kw OR 联系电话=@kw) AND 会员状态<>'已经停用'");
+            if (result.recordset.length === 0) {
+                res.status(400).json({status:{code:1005,message:'无此卡或卡已停用'}});
+            } else {
+                res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
+            }
+        } catch (err) {
+            console.error(err);
+            res.status(500).end();
+        }
+    })();
+});
+
 app.get('/api/v1/dossier', function(req, res) {
     const id = req.query['id'] || '';
     if (id.length !== 18) {
