@@ -95,14 +95,16 @@ app.get('/api/v1/guest/:id/info', function(req, res){
 
 app.get('/api/v1/card', function(req, res) {
 	const id = req.query['id'] || '';
+	const all = req.query['all'] === 'true' ;
     if (id.length !== 18) {
         res.status(400).json({status:{code:1001,message:'证件号码格式错误'}});
         return;
     }
 	(async () => {
 		try {
-            let result = await pool80.request().input('id', id)
-                .query("select * from Tr_member_Cardbaseinfo WHERE 身份证号码=@id AND 会员状态<>'已经停用'");
+		    let s = "select * from Tr_member_Cardbaseinfo WHERE 身份证号码=@id";
+		    if (!all) s += " AND 会员状态<>'已经停用'";
+            let result = await pool80.request().input('id', id).query(s);
             if (result.recordset.length === 0) {
                 res.status(400).json({status:{code:1005,message:'此证件号码尚未办卡或卡已停用'}});
             } else {
