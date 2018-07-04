@@ -741,6 +741,10 @@ app.post('/api/v1/card/:id/renew', function(req, res) {
                 return;
             }
             const r = result.recordset[0];
+            if ((f_mode === '连续续卡') && (r['会员状态'] === '已经停用')) {
+                res.status(400).json({status:{code:1006,message:'此客户会员卡已经停用'}});
+                return;
+            }
 /*
 			if (r['首次采购价格'] < f_price / 3.0) {
                 res.status(400).json({status:{code:1006,message:'续卡价格高于首次采购价格'}});
