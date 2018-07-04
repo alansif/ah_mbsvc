@@ -735,9 +735,9 @@ app.post('/api/v1/card/:id/renew', function(req, res) {
                 return;
             }
             result = await pool80.request().input('idnum', id)
-				.query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum AND 会员状态<>'已经停用'");
+				.query("select * from Tr_member_Cardbaseinfo where 身份证号码=@idnum");
             if (result.recordset.length === 0) {
-                res.status(400).json({status:{code:1005,message:'不是会员或会员卡已停用'}});
+                res.status(400).json({status:{code:1005,message:'未找到此证件号码的客户'}});
                 return;
             }
             const r = result.recordset[0];
