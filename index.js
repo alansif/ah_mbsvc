@@ -762,8 +762,11 @@ app.post('/api/v1/card/:id/renew', function(req, res) {
 				"VALUES(@uid,@cid,'3',3,0,@period0,@period1,'总部',GETDATE(),@operator,@price,@username,@sex,@idnum,'Y')";
             const s2 = "INSERT INTO Tr_member_Moneydetail(UserID,卡号,收款类型,项目名称,收款金额,收款门店,收款日期,收款人员,姓名,性别,身份证号码,标记)" +
                 "VALUES(@uid,@cid,'会员续卡','益生套餐',@price,'总部',GETDATE(),@operator,@username,@sex,@idnum,'Y')";
-            const s3 = "UPDATE Tr_member_Cardbaseinfo SET 会员期限类别='3',益生套餐=益生套餐+3,使用分类=@mode," +
+            const s3a = "UPDATE Tr_member_Cardbaseinfo SET 会员期限类别='3',益生套餐=益生套餐+3,使用分类=@mode," +
 				"首次采购价格=@price,有效期起始=@period0,有效期截止=@period1,标记='Y' WHERE 身份证号码=@idnum AND 会员状态<>'已经停用'";
+            const s3b = "UPDATE Tr_member_Cardbaseinfo SET 会员期限类别='3',益生套餐=3,使用分类=@mode,会员状态='新卡使用'," +
+                "首次采购价格=@price,有效期起始=@period0,有效期截止=@period1,标记='Y' WHERE 身份证号码=@idnum AND 会员状态='已经停用'";
+            const s3 = r['会员状态'] === '已经停用' ? s3b : s3a;
             const trans = pool80.transaction();
             trans.begin(err => {
                 if (err) {
