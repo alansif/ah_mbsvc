@@ -176,7 +176,7 @@ app.get('/api/v1/query/period', function(req, res){
     (async () => {
         try {
             let result = await pool80.request().input('from0', from0).input('from1', from1).input('to0', to0).input('to1', to1)
-                .query(`select top 100 * from Tr_member_Cardbaseinfo WHERE (有效期起始 between @from0 and @from1) AND (有效期截止 between @to0 and @to1)`);
+                .query(`select top 3000 * from Tr_member_Cardbaseinfo WHERE (有效期起始 between @from0 and @from1) AND (有效期截止 between @to0 and @to1)`);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
