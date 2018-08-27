@@ -929,6 +929,71 @@ app.post('/api/v1/card', function(req, res) {
 	f();
 });
 
+//===============================================================================
+
+function trans_routine(res, atrans) {
+    try{
+        const trans = pool80.transaction();
+        trans.begin(err => {
+            if (err) {
+                console.error(err);
+                res.status(500).end();
+                return;
+            }
+            let rolledBack = false;
+            trans.on('rollback', aborted => {
+                rolledBack = true;
+            });
+            (async() => {
+                await atrans(trans);
+                try {
+                    trans.commit(err_cm => {
+                        if (err_cm) {
+                            console.error('commit failed');
+                            res.status(500).end();
+                            return;
+                        }
+                        res.status(200).json({status:{code:0,message:'操作成功'},data:{}});
+                    });
+                } catch(err) {
+                    if (!rolledBack) {
+                        rolledBack = true;
+                        trans.rollback(err_rb => {
+                            if (err_rb) {
+                                console.error('rollback failed');
+                            }
+                        });
+                    }
+                    console.error(err);
+                    res.status(500).end();
+                }
+            })();
+        });
+    }catch(err) {
+        console.error(err);
+        res.status(500).end();
+    }
+}
+
+app.post('/api/v1/:id/demopost', function(req, res){
+    let id = req.params['id'];
+    if (id.length !== 18) {
+        res.status(400).json({status: {code: 1001, message: '证件号码格式错误'}});
+        return;
+    }
+    trans_routine(res, (id) => {
+        return (trans) => {
+            const s1 = "SELECT * from Tr_member_ChangeInfo WHERE 身份证号码=@idnum";
+            let p1 = trans.request().input('idnum', id).query(s1);
+            const s2 = "SELECT * from Tr_member_Cardbaseinfo WHERE 身份证号码=@idnum";
+            let p2 = trans.request().input('idnum', id).query(s2);
+            return Promise.all([p1, p2]);
+        }
+    });
+});
+
+//===============================================================================
+
 app.use(function(req, res){
     console.log(req.headers);
     console.log(req.body);
