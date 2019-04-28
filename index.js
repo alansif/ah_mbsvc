@@ -11,7 +11,7 @@ console.log = function() {
 
 console.error = function() {
     process.stderr.write((new Date()).toLocaleString() + ' - ');
-    console.oldtrace.apply(console, arguments);
+    console.olderror.apply(console, arguments);
 }
 
 console.trace = function() {
