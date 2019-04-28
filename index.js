@@ -1,16 +1,35 @@
 //const moment = require('moment')
 
+console.oldlog = console.log;
+console.olderror = console.error;
+console.oldtrace = console.trace;
+
+console.log = function() {
+    process.stdout.write((new Date()).toLocaleString() + ' - ');
+    console.oldlog.apply(console, arguments);
+}
+
+console.error = function() {
+    process.stderr.write((new Date()).toLocaleString() + ' - ');
+    console.oldtrace.apply(console, arguments);
+}
+
+console.trace = function() {
+    process.stderr.write((new Date()).toLocaleString() + ' - ');
+    console.oldtrace.apply(console, arguments);
+}
+
 const config80 = require('./config').config80;
 
 const sql = require('mssql');
 
 const pool80 = new sql.ConnectionPool(config80, err => {
     if (err)
-    console.log(err);
+        console.error(err);
 });
 
 pool80.on('error', err => {
-    console.log(err);
+    console.error(err);
 });
 
 const config253 = {
@@ -22,11 +41,11 @@ const config253 = {
 
 const pool253 = new sql.ConnectionPool(config253, err => {
     if (err)
-        console.log(err);
+        console.error(err);
 });
 
 pool253.on('error', err => {
-    console.log(err);
+    console.error(err);
 });
 
 const express = require('express');
@@ -67,7 +86,7 @@ app.post('/api/v1/login', function(req, res){
 			}
 		} catch(err) {
 			console.error(err);
-            		res.status(500).end();
+            res.status(500).end();
 		}
 	};
 	f();
@@ -866,7 +885,6 @@ app.post('/api/v1/card', function(req, res) {
 			let maxcid = result.recordset[0].maxcid || '600000';
 			maxcid = parseInt(maxcid) + 1;
 			maxcid = '' + maxcid;
-			console.log({maxuid, maxcid});
 			const s1 = "INSERT INTO Tr_member_CardStatus(UserID,卡号,卡状态,描述,操作人员,操作日期,开卡门店,标记) " +
 					"VALUES(@uid,@cid,1,'已发卡投入使用',@operator,GETDATE(),'总部','Y')";
 			const s2 = "INSERT INTO Tr_member_Cardbaseinfo(UserID,卡号,姓名,性别,身份证号码,联系电话,通讯地址,会员期限类别,益生套餐,采购健老,首次采购价格," +
