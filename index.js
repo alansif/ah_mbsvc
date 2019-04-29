@@ -19,6 +19,8 @@ console.trace = function() {
     console.oldtrace.apply(console, arguments);
 }
 
+function skip4(aa) { return aa - Math.floor(aa / 10) * 10 === 4 ? aa + 1 : aa; }
+
 const config80 = require('./config').config80;
 
 const sql = require('mssql');
@@ -195,7 +197,7 @@ app.get('/api/v1/query/period', function(req, res){
     (async () => {
         try {
             let result = await pool80.request().input('from0', from0).input('from1', from1).input('to0', to0).input('to1', to1)
-                .query(`select top 3000 * from Tr_member_Cardbaseinfo WHERE (有效期起始 between @from0 and @from1) AND (有效期截止 between @to0 and @to1)`);
+                .query(`select top 10000 * from Tr_member_Cardbaseinfo WHERE (有效期起始 between @from0 and @from1) AND (有效期截止 between @to0 and @to1)`);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
@@ -883,7 +885,7 @@ app.post('/api/v1/card', function(req, res) {
 			result = await pool80.request()
 				.query("select max(卡号) as maxcid from Tr_member_Cardbaseinfo where left(卡号,1) = '6'");
 			let maxcid = result.recordset[0].maxcid || '600000';
-			maxcid = parseInt(maxcid) + 1;
+			maxcid = skip4(parseInt(maxcid) + 1);
 			maxcid = '' + maxcid;
 			const s1 = "INSERT INTO Tr_member_CardStatus(UserID,卡号,卡状态,描述,操作人员,操作日期,开卡门店,标记) " +
 					"VALUES(@uid,@cid,1,'已发卡投入使用',@operator,GETDATE(),'总部','Y')";
