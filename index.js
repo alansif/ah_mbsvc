@@ -206,6 +206,41 @@ app.get('/api/v1/query/period', function(req, res){
     })();
 });
 
+app.get('/api/v1/query/combo', function(req, res){
+    let fromdate = req.query['fromdate'] || '';
+    let todate = req.query['todate'] || '';
+    if (fromdate.length === 0) fromdate = '2000-01-01';
+    fromdate += ' 00:00:00';
+    if (todate.length === 0) todate = '2039-12-31';
+    todate += ' 23:59:59';
+    let mbst        = req.query['mbst'] || '';
+    let usemode     = req.query['usemode'] || '';
+    let agent       = req.query['agent'] || '';
+    let advisor     = req.query['advisor'] || '';
+    let preferprice = req.query['preferprice'] || '';
+    let comment     = req.query['comment'] || '';
+    let remaintimes = req.query['remaintimes'] || '';
+    let balancegt0  = req.query['balancegt0'] || '';
+    let s1 = `select top 10000 * from Tr_member_Cardbaseinfo WHERE (签发日期 between @fromdate and @todate)`;
+    if (mbst.length > 0)        s1 += ` and 会员状态='${mbst}'`;
+    if (usemode.length > 0)     s1 += ` and 使用分类='${usemode}'`;
+    if (agent.length > 0)       s1 += ` and 会员经理='${agent}'`;
+    if (advisor.length > 0)     s1 += ` and 健康顾问='${advisor}'`;
+    if (preferprice.length > 0) s1 += ` and 首次采购价格=${preferprice}`;
+    if (comment.length > 0)     s1 += ` and 备注 like '%${comment}%'`;
+    if (remaintimes.length > 0) s1 += ` and 益生套餐-已用益生套餐=${remaintimes}`;
+    if (balancegt0.length > 0)  s1 += ` and 账户余额 > 0`;
+    (async () => {
+        try {
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1);
+            res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
+        } catch (err) {
+            console.error(err);
+            res.status(500).end();
+        }
+    })();
+});
+
 app.post('/api/v1/card/:id/changeinfo', function(req, res){
     let id = req.params['id'];
     if (id.length !== 18) {
