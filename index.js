@@ -949,6 +949,25 @@ app.post('/api/v1/card', function(req, res) {
 	f();
 });
 
+app.get('/api/v1/queryrec/renew', function(req, res){
+    let fromdate = req.query['from'] || '';
+    let todate = req.query['to'] || '';
+    if (fromdate.length === 0) fromdate = '2000-01-01';
+    fromdate += ' 00:00:00';
+    if (todate.length === 0) todate = '2039-12-31';
+    todate += ' 23:59:59';
+    (async () => {
+        try {
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate)
+                .query(`select top 10000 * from Tr_member_CardAddYearinfo WHERE (续卡日期 between @fromdate and @todate)`);
+            res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
+        } catch (err) {
+            console.error(err);
+            res.status(500).end();
+        }
+    })();
+});
+
 //===============================================================================
 
 function trans_routine(res, atrans) {
