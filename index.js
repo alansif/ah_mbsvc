@@ -1035,8 +1035,8 @@ app.get('/api/v1/queryrec/deposit', function(req, res){
     let itemname = req.query['itemname'] || '*';
     let dpclass = req.query['dpclass'] || '*';
     let s1 = `select top 10000 * from Tr_member_Moneydetail WHERE (收款日期 between @fromdate and @todate)`;
-    let s2 = itemname === '*' ? '' : ` and 项目名称='${itemname}'`
-    let s3 = dpclass === '*' ? '' : ` and 收费类型='${dpclass}'`
+    let s2 = itemname === '*' ? '' : ` and 项目名称='${itemname}'`;
+    let s3 = dpclass === '*' ? '' : ` and 收款类型='${dpclass}'`;
     (async () => {
         try {
             let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3);
@@ -1058,8 +1058,8 @@ app.get('/api/v1/queryrec/consume', function(req, res){
     let itemname = req.query['itemname'] || '*';
     let branch = req.query['branch'] || '*';
     let s1 = `select top 10000 * from Tr_member_ConsumeRecord WHERE (体检日期 between @fromdate and @todate)`;
-    let s2 = itemname === '*' ? '' : ` and 项目名称='${itemname}'`
-    let s3 = branch === '*' ? '' : ` and 体检门店='${branch}'`
+    let s2 = itemname === '*' ? '' : ` and 项目名称='${itemname}'`;
+    let s3 = branch === '*' ? '' : ` and 体检门店='${branch}'`;
     (async () => {
         try {
             let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3);
