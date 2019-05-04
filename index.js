@@ -19,7 +19,14 @@ console.trace = function() {
     console.oldtrace.apply(console, arguments);
 }
 
-function skip4(aa) { return aa - Math.floor(aa / 10) * 10 === 4 ? aa + 1 : aa; }
+function skip4(aa) {
+	if (aa < 10) {
+		return aa === 4 ? 5 : aa;
+	}
+	let bb = Math.floor(aa / 10);
+	let cc = aa - bb * 10;
+	return skip4(bb) * 10 + skip4(cc); 
+}
 
 const config80 = require('./config').config80;
 
