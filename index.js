@@ -998,10 +998,12 @@ app.get('/api/v1/queryrec/renew', function(req, res){
     fromdate += ' 00:00:00';
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
+	let idnumber = req.query['idnumber'] || '';
+	let s1 = `select top 10000 * from Tr_member_CardAddYearinfo WHERE (续卡日期 between @fromdate and @todate)`;
+	let s2 = idnumber.length === 0 ? : '' : ` and 身份证号码='${idnumber}'`;
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate)
-                .query(`select top 10000 * from Tr_member_CardAddYearinfo WHERE (续卡日期 between @fromdate and @todate)`);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
@@ -1017,10 +1019,12 @@ app.get('/api/v1/queryrec/new', function(req, res){
     fromdate += ' 00:00:00';
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
+	let idnumber = req.query['idnumber'] || '';
+	let s1 = `select top 10000 * from Tr_member_RegCardinfo WHERE (发卡日期 between @fromdate and @todate)`;
+	let s2 = idnumber.length === 0 ? : '' : ` and 身份证号码='${idnumber}'`;
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate)
-                .query(`select top 10000 * from Tr_member_RegCardinfo WHERE (发卡日期 between @fromdate and @todate)`);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
@@ -1036,10 +1040,12 @@ app.get('/api/v1/queryrec/transfer', function(req, res){
     fromdate += ' 00:00:00';
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
+	let idnumber = req.query['idnumber'] || '';
+	let s1 = `select top 10000 * from Tr_member_ChangeCardinfo WHERE (转卡日期 between @fromdate and @todate)`;
+	let s2 = idnumber.length === 0 ? : '' : ` and 身份证号码='${idnumber}'`;
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate)
-                .query(`select top 10000 * from Tr_member_ChangeCardinfo WHERE (转卡日期 between @fromdate and @todate)`);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
@@ -1055,10 +1061,12 @@ app.get('/api/v1/queryrec/refund', function(req, res){
     fromdate += ' 00:00:00';
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
+	let idnumber = req.query['idnumber'] || '';
+	let s1 = `select top 10000 * from Tr_member_ReturnCardinfo WHERE (退卡日期 between @fromdate and @todate)`;
+	let s2 = idnumber.length === 0 ? : '' : ` and 身份证号码='${idnumber}'`;
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate)
-                .query(`select top 10000 * from Tr_member_ReturnCardinfo WHERE (退卡日期 between @fromdate and @todate)`);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
@@ -1074,14 +1082,16 @@ app.get('/api/v1/queryrec/deposit', function(req, res){
     fromdate += ' 00:00:00';
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
+	let idnumber = req.query['idnumber'] || '';
     let itemname = req.query['itemname'] || '*';
     let dpclass = req.query['dpclass'] || '*';
     let s1 = `select top 10000 * from Tr_member_Moneydetail WHERE (收款日期 between @fromdate and @todate)`;
     let s2 = itemname === '*' ? '' : ` and 项目名称='${itemname}'`;
     let s3 = dpclass === '*' ? '' : ` and 收款类型='${dpclass}'`;
+	let s4 = idnumber.length === 0 ? : '' : ` and 身份证号码='${idnumber}'`;
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3+s4);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
@@ -1097,14 +1107,16 @@ app.get('/api/v1/queryrec/consume', function(req, res){
     fromdate += ' 00:00:00';
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
+	let idnumber = req.query['idnumber'] || '';
     let itemname = req.query['itemname'] || '*';
     let branch = req.query['branch'] || '*';
     let s1 = `select top 10000 * from Tr_member_ConsumeRecord WHERE (体检日期 between @fromdate and @todate)`;
     let s2 = itemname === '*' ? '' : ` and 项目名称='${itemname}'`;
     let s3 = branch === '*' ? '' : ` and 体检门店='${branch}'`;
+	let s4 = idnumber.length === 0 ? : '' : ` and 身份证号码='${idnumber}'`;
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3+s4);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
@@ -1120,10 +1132,12 @@ app.get('/api/v1/queryrec/extend', function(req, res){
     fromdate += ' 00:00:00';
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
+	let idnumber = req.query['idnumber'] || '';
+	let s1 = `select top 10000 * from Tr_member_ChangePeriod WHERE (操作日期 between @fromdate and @todate)`;
+	let s2 = idnumber.length === 0 ? : '' : ` and 身份证号码='${idnumber}'`;
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate)
-                .query(`select top 10000 * from Tr_member_ChangePeriod WHERE (操作日期 between @fromdate and @todate)`);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
