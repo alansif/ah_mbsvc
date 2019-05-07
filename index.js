@@ -1062,7 +1062,9 @@ app.get('/api/v1/queryrec/refund', function(req, res){
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
 	let idnumber = req.query['idnumber'] || '';
-	let s1 = `select top 10000 * from Tr_member_ReturnCardinfo WHERE (退卡日期 between @fromdate and @todate)`;
+	let s1 = "select t1.*,t2.IsVip from Tr_member_ReturnCardinfo as t1"
+		+ " left join [253].[HZNewDB].[dbo].[T_Guest_Info] as t2 on t1.身份证号码=t2.PaperValue"
+		+ " WHERE (t1.退卡日期 between @fromdate and @todate)"
 	let s2 = idnumber.length === 0 ? '' : ` and 身份证号码='${idnumber}'`;
     (async () => {
         try {
