@@ -999,8 +999,9 @@ app.get('/api/v1/queryrec/renew', function(req, res){
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
 	let idnumber = req.query['idnumber'] || '';
-	let s1 = `select top 10000 * from Tr_member_CardAddYearinfo WHERE (续卡日期 between @fromdate and @todate)`;
-	let s2 = idnumber.length === 0 ? '' : ` and 身份证号码='${idnumber}'`;
+	let s1 = 'SELECT top 10000 t1.*,t2.签发日期 FROM Tr_member_CardAddYearinfo as t1 left join Tr_member_Cardbaseinfo as t2 on t1.身份证号码=t2.身份证号码'
+		+ ' WHERE (t1.续卡日期 between @fromdate and @todate)';
+	let s2 = idnumber.length === 0 ? '' : ` and t1.身份证号码='${idnumber}'`;
     (async () => {
         try {
             let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2);
