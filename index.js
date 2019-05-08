@@ -1020,11 +1020,13 @@ app.get('/api/v1/queryrec/new', function(req, res){
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
 	let idnumber = req.query['idnumber'] || '';
+	let advisor = req.query['advisor'] || '';
 	let s1 = `select top 10000 * from Tr_member_RegCardinfo WHERE (发卡日期 between @fromdate and @todate)`;
 	let s2 = idnumber.length === 0 ? '' : ` and 身份证号码='${idnumber}'`;
+    let s3 = advisor.length === 0 ? '' : ` and 健康顾问=${advisor}`
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
@@ -1042,7 +1044,7 @@ app.get('/api/v1/queryrec/transfer', function(req, res){
     todate += ' 23:59:59';
 	let idnumber = req.query['idnumber'] || '';
 	let s1 = `select top 10000 * from Tr_member_ChangeCardinfo WHERE (转卡日期 between @fromdate and @todate)`;
-	let s2 = idnumber.length === 0 ? '' : ` and 身份证号码='${idnumber}'`;
+    let s2 = idnumber.length === 0 ? '' : ` and 身份证号码='${idnumber}'`;
     (async () => {
         try {
             let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2);
@@ -1062,13 +1064,15 @@ app.get('/api/v1/queryrec/refund', function(req, res){
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
 	let idnumber = req.query['idnumber'] || '';
+	let color = req.query['color'] || '';
 	let s1 = "select t1.*,t2.IsVip from Tr_member_ReturnCardinfo as t1"
 		+ " left join [253].[HZNewDB].[dbo].[T_Guest_Info] as t2 on t1.身份证号码=t2.PaperValue"
 		+ " WHERE (t1.退卡日期 between @fromdate and @todate)"
 	let s2 = idnumber.length === 0 ? '' : ` and 身份证号码='${idnumber}'`;
+	let s3 = color.length === 0 ? '' : ` and t2.IsVip like '%${color}%'`;
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
