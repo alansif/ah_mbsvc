@@ -1023,7 +1023,7 @@ app.get('/api/v1/queryrec/new', function(req, res){
 	let advisor = req.query['advisor'] || '';
 	let s1 = `select top 10000 * from Tr_member_RegCardinfo WHERE (发卡日期 between @fromdate and @todate)`;
 	let s2 = idnumber.length === 0 ? '' : ` and 身份证号码='${idnumber}'`;
-    let s3 = advisor.length === 0 ? '' : ` and 健康顾问=${advisor}`;
+    let s3 = advisor.length === 0 ? '' : ` and 健康顾问='${advisor}'`;
     (async () => {
         try {
             let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3);
