@@ -235,7 +235,7 @@ app.get('/api/v1/query/combo', function(req, res){
     let remaintimes = req.query['remaintimes'] || '';
     let balancegt0  = req.query['balancegt0'] || '';
     let s1 = `select top 10000 * from Tr_member_Cardbaseinfo WHERE (签发日期 between @fromdate and @todate)`;
-	s1 += " and (延期止 between @exfromdate and @extodate";
+	s1 += " and (延期止 between @exfromdate and @extodate)";
     if (mbst.length > 0)        s1 += ` and 会员状态='${mbst}'`;
     if (usemode.length > 0)     s1 += ` and 使用分类='${usemode}'`;
     if (agent.length > 0)       s1 += ` and 会员经理='${agent}'`;
