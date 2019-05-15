@@ -745,7 +745,7 @@ app.post('/api/v1/card/:id/transfer', function(req, res) {
                         await trans.request().input('uid',r0['UserID']).input('cid',r0['卡号']).input('username',r1['Name']).input('sex',r1['Sex'])
                             .input('id1',id1).input('mobile',r1['Mobile']).input('address',r1['Address']).input('passwd',r0['用户密码'])
                             .input('operator',f_operator).input('level',r0['会员期限类别']).input('tc',r0['益生套餐']).input('jl',r0['采购健老'])
-                            .input('price',r0['首次采购价格']).input('discount',r0['享受折扣']).input('period0',r0['有效期起始']).input('period1',r0['有效期截止']).input('period2',r0['延期止'])
+                            .input('price',r0['首次采购价格']).input('discount',r0['享受折扣']).input('period0',r0['有效期起始']).input('period1',r0['有效期截止']).input('period2',r0['有效期截止'])
                             .input('issuedt',r0['签发日期']).input('advisor',r0['健康顾问']).input('shop',r0['发卡门店']).input('status',r0['卡片开启'])
                             .input('comment',r0['备注']).input('altphone',f_altphone).input('z1',r0['账户预存']).input('z2',r0['日常消费'])
                             .input('z3',r0['账户余额']).input('z4',r0['已用益生套餐']).input('z5',r0['已用采购健老']).input('z6',r0['会员经理'])
