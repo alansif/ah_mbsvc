@@ -191,20 +191,26 @@ app.get('/api/v1/dossier', function(req, res) {
 app.get('/api/v1/query/period', function(req, res){
     let from0 = req.query['from0'] || '';
     let from1 = req.query['from1'] || '';
+    let exp0 = req.query['exp0'] || '';
+    let exp1 = req.query['exp1'] || '';
     let to0 = req.query['to0'] || '';
     let to1 = req.query['to1'] || '';
     if (from0.length === 0) from0 = '2000-01-01';
     if (from1.length === 0) from1 = '2039-12-31';
     from0 += ' 00:00:00';
     from1 += ' 23:59:59';
+    if (exp0.length === 0) exp0 = '2000-01-01';
+    if (exp1.length === 0) exp1 = '2039-12-31';
+    exp0 += ' 00:00:00';
+    exp1 += ' 23:59:59';
     if (to0.length === 0) to0 = '2000-01-01';
     if (to1.length === 0) to1 = '2039-12-31';
     to0 += ' 00:00:00';
     to1 += ' 23:59:59';
     (async () => {
         try {
-            let result = await pool80.request().input('from0', from0).input('from1', from1).input('to0', to0).input('to1', to1)
-                .query(`select top 10000 * from Tr_member_Cardbaseinfo WHERE (有效期起始 between @from0 and @from1) AND (延期止 between @to0 and @to1)`);
+            let result = await pool80.request().input('from0', from0).input('from1', from1).input('exp0', exp0).input('exp1', exp1).input('to0', to0).input('to1', to1)
+                .query(`select top 10000 * from Tr_member_Cardbaseinfo WHERE (有效期起始 between @from0 and @from1) AND (有效期截止 between @exp0 and @exp1) AND (延期止 between @to0 and @to1)`);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
@@ -220,6 +226,12 @@ app.get('/api/v1/query/combo', function(req, res){
     fromdate += ' 00:00:00';
     if (todate.length === 0) todate = '2039-12-31';
     todate += ' 23:59:59';
+    let expfromdate = req.query['expfromdate'] || '';
+    let exptodate = req.query['exptodate'] || '';
+    if (expfromdate.length === 0) expfromdate = '2000-01-01';
+    expfromdate += ' 00:00:00';
+    if (exptodate.length === 0) exptodate = '2039-12-31';
+    exptodate += ' 23:59:59';
     let exfromdate = req.query['exfromdate'] || '';
     let extodate = req.query['extodate'] || '';
     if (exfromdate.length === 0) exfromdate = '2000-01-01';
@@ -235,6 +247,7 @@ app.get('/api/v1/query/combo', function(req, res){
     let remaintimes = req.query['remaintimes'] || '';
     let balancegt0  = req.query['balancegt0'] || '';
     let s1 = `select top 10000 * from Tr_member_Cardbaseinfo WHERE (签发日期 between @fromdate and @todate)`;
+	s1 += " and (有效期截止 between @expfromdate and @exptodate)";
 	s1 += " and (延期止 between @exfromdate and @extodate)";
     if (mbst.length > 0)        s1 += ` and 会员状态='${mbst}'`;
     if (usemode.length > 0)     s1 += ` and 使用分类='${usemode}'`;
@@ -247,6 +260,7 @@ app.get('/api/v1/query/combo', function(req, res){
     (async () => {
         try {
             let result = await pool80.request().input('fromdate', fromdate).input('todate', todate)
+                .input('expfromdate', expfromdate).input('exptodate', exptodate)
 				.input('exfromdate', exfromdate).input('extodate', extodate).query(s1);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
