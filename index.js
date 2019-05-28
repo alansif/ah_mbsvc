@@ -246,6 +246,7 @@ app.get('/api/v1/query/combo', function(req, res){
     let comment     = req.query['comment'] || '';
     let remaintimes = req.query['remaintimes'] || '';
     let balancegt0  = req.query['balancegt0'] || '';
+    let operator    = req.query['operator'] || '';
     let s1 = `select top 10000 * from Tr_member_Cardbaseinfo WHERE (签发日期 between @fromdate and @todate)`;
 	s1 += " and (有效期截止 between @expfromdate and @exptodate)";
 	s1 += " and (延期止 between @exfromdate and @extodate)";
@@ -257,6 +258,7 @@ app.get('/api/v1/query/combo', function(req, res){
     if (comment.length > 0)     s1 += ` and 备注 like '%${comment}%'`;
     if (remaintimes.length > 0) s1 += ` and 益生套餐-已用益生套餐=${remaintimes}`;
     if (balancegt0.length > 0)  s1 += ` and 账户余额 > 0`;
+    if (operator.length > 0)    s1 += ` and 操作人员='${operator}'`;
     (async () => {
         try {
             let result = await pool80.request().input('fromdate', fromdate).input('todate', todate)
