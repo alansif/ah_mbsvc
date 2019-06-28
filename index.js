@@ -1024,13 +1024,15 @@ app.get('/api/v1/queryrec/renew', function(req, res){
     todate += ' 23:59:59';
     let idnumber = req.query['idnumber'] || '';
     let operator = req.query['operator'] || '';
-	let s1 = 'SELECT top 10000 t1.*,t2.签发日期 FROM Tr_member_CardAddYearinfo as t1 left join Tr_member_Cardbaseinfo as t2 on t1.身份证号码=t2.身份证号码'
+    let numrenew = req.query['numrenew'] || '';
+	let s1 = 'SELECT top 10000 t1.*,t2.签发日期,t2.益生套餐 / 3 as 续卡次数 FROM Tr_member_CardAddYearinfo as t1 left join Tr_member_Cardbaseinfo as t2 on t1.身份证号码=t2.身份证号码'
 		+ ' WHERE (t1.续卡日期 between @fromdate and @todate)';
 	let s2 = idnumber.length === 0 ? '' : ` and t1.身份证号码='${idnumber}'`;
 	let s3 = operator.length === 0 ? '' : ` and t1.操作人员='${operator}'`;
+	let s4 = numrenew.length === 0 ? '' : ` and 续卡次数=${numrenew}`;
     (async () => {
         try {
-            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3);
+            let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3+s4);
             res.status(200).json({status:{code:0,message:'ok'},data:result.recordset});
         } catch (err) {
             console.error(err);
