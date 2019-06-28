@@ -1029,7 +1029,7 @@ app.get('/api/v1/queryrec/renew', function(req, res){
 		+ " WHERE (t2.会员状态<>'已经停用') and (t1.续卡日期 between @fromdate and @todate)";
 	let s2 = idnumber.length === 0 ? '' : ` and t1.身份证号码='${idnumber}'`;
 	let s3 = operator.length === 0 ? '' : ` and t1.操作人员='${operator}'`;
-	let s4 = numrenew.length === 0 ? '' : ` and 续卡次数=${numrenew}`;
+	let s4 = numrenew.length === 0 ? '' : ` and (t2.益生套餐 / 3 - 1 = ${numrenew})`;
     (async () => {
         try {
             let result = await pool80.request().input('fromdate', fromdate).input('todate', todate).query(s1+s2+s3+s4);
