@@ -1025,8 +1025,8 @@ app.get('/api/v1/queryrec/renew', function(req, res){
     let idnumber = req.query['idnumber'] || '';
     let operator = req.query['operator'] || '';
     let numrenew = req.query['numrenew'] || '';
-	let s1 = 'SELECT top 10000 t1.*,t2.签发日期,t2.益生套餐 / 3 as 续卡次数 FROM Tr_member_CardAddYearinfo as t1 left join Tr_member_Cardbaseinfo as t2 on t1.身份证号码=t2.身份证号码'
-		+ ' WHERE (t1.续卡日期 between @fromdate and @todate)';
+	let s1 = 'SELECT top 10000 t1.*,t2.签发日期,t2.益生套餐 / 3 - 1 as 续卡次数 FROM Tr_member_CardAddYearinfo as t1 left join Tr_member_Cardbaseinfo as t2 on t1.身份证号码=t2.身份证号码'
+		+ " WHERE (t2.会员状态<>'已经停用') and (t1.续卡日期 between @fromdate and @todate)";
 	let s2 = idnumber.length === 0 ? '' : ` and t1.身份证号码='${idnumber}'`;
 	let s3 = operator.length === 0 ? '' : ` and t1.操作人员='${operator}'`;
 	let s4 = numrenew.length === 0 ? '' : ` and 续卡次数=${numrenew}`;
