@@ -938,7 +938,7 @@ app.post('/api/v1/card', function(req, res) {
                 return;
             }
 			result = await pool80.request().input('id', id)
-				.query("select * from Tr_member_Cardbaseinfo WHERE 身份证号码=@id");
+				.query("select * from Tr_member_Cardbaseinfo WHERE 身份证号码=@id AND 会员状态<>'已经停用'");
 			if (result.recordset.length !== 0) {
 				res.status(400).json({status:{code:1003,message:'此证件号码已办理过会员卡'}});
 				return;
