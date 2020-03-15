@@ -261,9 +261,9 @@ app.get('/api/v1/query/combo', function(req, res){
     if (balancegt0.length > 0)  s1 += ` and 账户余额 > 0`;
     if (operator.length > 0)    s1 += ` and 操作人员='${operator}'`;
     if (mbst2 === '有效会员') {
-	    s1 += ` and 会员状态<>'已经停用' and getdate()>=延期止`;
+	    s1 += ` and 会员状态<>'已经停用' and getdate()<=延期止`;
     } else if (mbst2 === '无效会员') {
-	    s1 += ` and (会员状态='已经停用' or getdate()<延期止)`;
+	    s1 += ` and (会员状态='已经停用' or getdate()>延期止)`;
     }
     (async () => {
         try {
