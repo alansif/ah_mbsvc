@@ -247,6 +247,7 @@ app.get('/api/v1/query/combo', function(req, res){
     let remaintimes = req.query['remaintimes'] || '';
     let balancegt0  = req.query['balancegt0'] || '';
     let operator    = req.query['operator'] || '';
+    let mbst2       = req.query['mbst2'] || '';
     let s1 = `select top 10000 * from Tr_member_Cardbaseinfo WHERE (签发日期 between @fromdate and @todate)`;
 	s1 += " and (有效期截止 between @expfromdate and @exptodate)";
 	s1 += " and (延期止 between @exfromdate and @extodate)";
@@ -259,6 +260,11 @@ app.get('/api/v1/query/combo', function(req, res){
     if (remaintimes.length > 0) s1 += ` and 益生套餐-已用益生套餐=${remaintimes}`;
     if (balancegt0.length > 0)  s1 += ` and 账户余额 > 0`;
     if (operator.length > 0)    s1 += ` and 操作人员='${operator}'`;
+    if (mbst2 === '有效会员') {
+	    s1 += ` and 会员状态<>'已经停用' and getdate()>=延期止`;
+    } else if (mbst2 === '无效会员') {
+	    s1 += ` and (会员状态='已经停用' or getdate()<延期止)`;
+    }
     (async () => {
         try {
             let result = await pool80.request().input('fromdate', fromdate).input('todate', todate)
@@ -943,6 +949,9 @@ app.post('/api/v1/card', function(req, res) {
 				res.status(400).json({status:{code:1003,message:'此证件号码已办理过会员卡'}});
 				return;
 			}
+			result = await pool80.request().input('id', id)
+				.query("select * from Tr_member_Cardbaseinfo WHERE 身份证号码=@id AND 会员状态='已经停用'");
+			const f_useca = result.recordset.length === 0 ? '新会员' : '间断续卡';
 			result = await pool80.request()
 				.query("select max(UserID) as maxuid from Tr_member_Cardbaseinfo where left(UserID,5) = '00006'");
 			let maxuid = result.recordset[0].maxuid || '600000';
@@ -958,7 +967,7 @@ app.post('/api/v1/card', function(req, res) {
 			const s2 = "INSERT INTO Tr_member_Cardbaseinfo(UserID,卡号,姓名,性别,身份证号码,联系电话,通讯地址,会员期限类别,益生套餐,采购健老,首次采购价格," +
 					"有效期起始,有效期截止,延期止,签发日期,用户密码,健康顾问,发卡门店,会员状态,操作日期,操作人员,卡片开启,备注,使用分类,定制电话,标记,电子邮件) " +
 					"VALUES(@uid,@cid,@username,@sex,@idnum,@mobile,@address,'3',3,0,@price,@period0,@period1,@period1,GETDATE(),'888888',@advisor,'总部'," +
-					"'新卡使用',GETDATE(),@operator,'开启',@comment,'新会员',@altphone,'Y',@email)";
+					"'新卡使用',GETDATE(),@operator,'开启',@comment,@useca,@altphone,'Y',@email)";
 			const s3 = "INSERT INTO Tr_member_Moneydetail(UserID,卡号,收款类型,项目名称,收款金额,收款门店,收款日期,收款人员,姓名,性别,身份证号码,标记) " +
 					"VALUES(@uid,@cid,'首次入会','益生套餐',@price,'总部',GETDATE(),@operator,@username,@sex,@idnum,'Y')";
 			const s4 = "INSERT INTO Tr_member_RegCardinfo(UserID,卡号,姓名,性别,身份证号码,联系电话,通讯地址,健康顾问,发卡门店,发卡日期,操作人员,标记) " +
@@ -980,7 +989,7 @@ app.post('/api/v1/card', function(req, res) {
                         await trans.request().input('uid',maxuid).input('cid',maxcid).input('username',f_name).input('sex',f_sex)
 							.input('idnum',id).input('mobile',f_mobile).input('address',f_address).input('price',f_price / 3.0)
 							.input('period0',f_period0).input('period1',f_period1).input('advisor',f_advisor).input('operator',f_operator)
-							.input('comment',f_comment).input('altphone',f_altphone).input('email',f_email).query(s2);
+							.input('comment',f_comment).input('useca',f_useca).input('altphone',f_altphone).input('email',f_email).query(s2);
                         await trans.request().input('uid',maxuid).input('cid',maxcid).input('price',f_price)
 							.input('operator',f_operator).input('username',f_name).input('sex',f_sex).input('idnum',id).query(s3);
                         await trans.request().input('uid',maxuid).input('cid',maxcid).input('username',f_name).input('sex',f_sex)
