@@ -364,6 +364,7 @@ app.post('/api/v1/card/:id/changeperiod', function(req, res) {
     }
     let f_period0 = trim(req.body.period0 || '');
     let f_period1 = trim(req.body.period1 || '');
+    let f_period2 = trim(req.body.period2 || '');
     let f_comment = trim(req.body.comment || '');
     let f_operator = trim(req.body.operator || '');
     (async () => {
@@ -381,7 +382,8 @@ app.post('/api/v1/card/:id/changeperiod', function(req, res) {
             const f_sex = r['性别'];
             const f_oldp0 = r['有效期起始'];
             const f_oldp1 = r['延期止'];
-            const s1 = "UPDATE Tr_member_Cardbaseinfo SET 有效期起始=@p0,延期止=@p1 WHERE 身份证号码=@idnum";
+            const f_oldp2 = r['有效期截止'];
+            const s1 = "UPDATE Tr_member_Cardbaseinfo SET 有效期起始=@p0,延期止=@p1,有效期截止=@p2 WHERE 身份证号码=@idnum";
             const s2 = "INSERT INTO Tr_member_ChangePeriod(UserID,卡号,姓名,性别,身份证号码,原有效期起始,原有效期截止,新有效期起始,新有效期截止,备注,操作日期,操作人员) " +
 				"VALUES(@uid,@cid,@username,@sex,@idnum,@oldp0,@oldp1,@newp0,@newp1,@comment,GETDATE(),@operator)";
             const trans = pool80.transaction();
@@ -396,9 +398,10 @@ app.post('/api/v1/card/:id/changeperiod', function(req, res) {
                     rolledBack = true;
                 });
                 (async function(){
-                    await trans.request().input('idnum',id).input('p0',f_period0).input('p1',f_period1).query(s1);
+                    await trans.request().input('idnum',id).input('p0',f_period0).input('p1',f_period1).input('p2',f_period2).query(s1);
                     await trans.request().input('uid',f_userid).input('cid',f_cardid).input('username',f_name).input('sex',f_sex).input('idnum',id)
 						.input('oldp0',f_oldp0).input('oldp1',f_oldp1).input('newp0',f_period0).input('newp1',f_period1).input('comment',f_comment)
+						.input('oldp2',f_oldp2).input('newp2',f_period2)
 						.input('operator',f_operator).query(s2);
                     try {
                         trans.commit(err_cm => {
