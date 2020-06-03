@@ -384,8 +384,8 @@ app.post('/api/v1/card/:id/changeperiod', function(req, res) {
             const f_oldp1 = r['延期止'];
             const f_oldp2 = r['有效期截止'];
             const s1 = "UPDATE Tr_member_Cardbaseinfo SET 有效期起始=@p0,延期止=@p1,有效期截止=@p2 WHERE 身份证号码=@idnum";
-            const s2 = "INSERT INTO Tr_member_ChangePeriod(UserID,卡号,姓名,性别,身份证号码,原有效期起始,原有效期截止,新有效期起始,新有效期截止,备注,操作日期,操作人员) " +
-				"VALUES(@uid,@cid,@username,@sex,@idnum,@oldp0,@oldp1,@newp0,@newp1,@comment,GETDATE(),@operator)";
+            const s2 = "INSERT INTO Tr_member_ChangePeriod(UserID,卡号,姓名,性别,身份证号码,原有效期起始,原有效期截止,新有效期起始,新有效期截止,备注,操作日期,操作人员,原有效期截止2,新有效期截止2) " +
+				"VALUES(@uid,@cid,@username,@sex,@idnum,@oldp0,@oldp1,@newp0,@newp1,@comment,GETDATE(),@operator,@oldp2,@newp2)";
             const trans = pool80.transaction();
             trans.begin(err => {
                 if (err) {
